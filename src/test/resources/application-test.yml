@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:campusconnect;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+app:
+  jwt:
+    secret: test-secret-test-secret-test-secret-12345
+    expiration-ms: 3600000

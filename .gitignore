@@ -1,0 +1,24 @@
+# Maven
+/target/
+
+# Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+
+# Env
+.env
+.env.*
+
+# IDEs
+/.idea/
+*.iml
+/.classpath
+/.project
+/.settings/
+
+# OS
+.DS_Store
+
+# Logs
+*.log

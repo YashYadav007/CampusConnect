@@ -1,0 +1,36 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/campusconnect?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true}
+    username: root
+    # Default empty password matches common local MySQL installs.
+    # If you're using docker-compose, set DB_PASSWORD=password (see README).
+    password: ""
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+app:
+  jwt:
+    # Provide a strong secret via env var in real deployments.
+    # For HS256, 32+ chars is recommended.
+    # Default is for local development/demo only.
+    secret: ${JWT_SECRET:demo-jwt-secret-change-me-please-32chars}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24h
+
+  demo:
+    # Seeds a realistic demo storyline (users, Q&A, votes/accept, lost&found, claims) if DB has no users yet.
+    seed: true
+
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
