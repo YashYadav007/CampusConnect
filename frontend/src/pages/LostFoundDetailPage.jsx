@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { CalendarDays, MapPin, ShieldCheck, User } from 'lucide-react'
+import { CalendarDays, Copy, Mail, MapPin, ShieldCheck, User } from 'lucide-react'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Loader } from '../components/common/Loader'
 import { Alert } from '../components/common/Alert'
@@ -151,6 +151,16 @@ export function LostFoundDetailPage() {
     }
   }
 
+  const copyOwnerEmail = async () => {
+    if (!post?.ownerEmail) return
+    try {
+      await navigator.clipboard.writeText(post.ownerEmail)
+      showToast({ tone: 'success', title: 'Email copied', message: 'Owner email copied to clipboard.' })
+    } catch {
+      showToast({ tone: 'error', title: 'Copy failed', message: 'Could not copy email to clipboard.' })
+    }
+  }
+
   if (loading) {
     return (
       <PageContainer title="Lost & Found" subtitle="Loading post">
@@ -222,6 +232,30 @@ export function LostFoundDetailPage() {
                 </div>
                 <div className="mt-1 text-sm font-semibold text-slate-700">{post.user?.fullName || 'Unknown'}</div>
               </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                <Mail className="h-4 w-4 text-indigo-700" />
+                Contact Owner
+              </div>
+              {isOwner ? (
+                <div className="mt-2 text-sm font-semibold text-slate-600">This is your post.</div>
+              ) : (
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 break-all">
+                    {post.ownerEmail || 'Email not available'}
+                  </div>
+                  <Button
+                    variant="secondary"
+                    className="gap-2"
+                    onClick={copyOwnerEmail}
+                    disabled={!post.ownerEmail}
+                  >
+                    <Copy className="h-4 w-4" /> Copy Email
+                  </Button>
+                </div>
+              )}
             </div>
 
             {showLoginToClaim ? (

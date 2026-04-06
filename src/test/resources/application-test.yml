@@ -13,3 +13,6 @@ app:
   jwt:
     secret: test-secret-test-secret-test-secret-12345
     expiration-ms: 3600000
+  razorpay:
+    key-id: test_key_id
+    key-secret: test_key_secret_123456789

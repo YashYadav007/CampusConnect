@@ -25,7 +25,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties({JwtProperties.class, CorsProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, CorsProperties.class, RazorpayProperties.class})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -54,6 +54,10 @@ public class SecurityConfig {
 
             // Q&A public read endpoints
             .requestMatchers(HttpMethod.GET, "/api/questions/**").permitAll()
+
+            // Marketplace mixed read endpoints
+            .requestMatchers(HttpMethod.GET, "/api/marketplace/my-listings").authenticated()
+            .requestMatchers(HttpMethod.GET, "/api/marketplace", "/api/marketplace/*").permitAll()
 
             // Lost & Found public read endpoints
             .requestMatchers(HttpMethod.GET, "/api/lost-found/*/claims").authenticated()

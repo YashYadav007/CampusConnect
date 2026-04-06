@@ -108,6 +108,7 @@ public class LostFoundService {
         .status(p.getStatus())
         .createdAt(p.getCreatedAt())
         .user(UserSummaryResponse.builder().id(p.getUser().getId()).fullName(p.getUser().getFullName()).build())
+        .ownerEmail(p.getUser().getEmail())
         .build();
   }
 

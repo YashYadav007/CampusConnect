@@ -25,4 +25,5 @@ public class LostFoundPostResponse {
   private ItemStatus status;
   private LocalDateTime createdAt;
   private UserSummaryResponse user;
+  private String ownerEmail;
 }

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, FileQuestion, PlusCircle, Search, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowRight, FileQuestion, PlusCircle, ShieldCheck, ShoppingBag, Sparkles } from 'lucide-react'
 import { listQuestions } from '../api/questionApi'
 import { listLostFound } from '../api/lostFoundApi'
+import { getMarketplaceItems } from '../api/marketplaceApi'
 import { getApiErrorMessage } from '../api/axios'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/common/Button'
@@ -10,6 +11,7 @@ import { Loader } from '../components/common/Loader'
 import { Alert } from '../components/common/Alert'
 import { QuestionCard } from '../components/qa/QuestionCard'
 import { LostFoundCard } from '../components/lostfound/LostFoundCard'
+import { MarketplaceCard } from '../components/marketplace/MarketplaceCard'
 import { useAuth } from '../hooks/useAuth'
 
 function ActionCard({ to, icon: Icon, title, desc }) {
@@ -34,19 +36,26 @@ export function HomePage() {
   const navigate = useNavigate()
   const [qLoading, setQLoading] = useState(true)
   const [lfLoading, setLfLoading] = useState(true)
+  const [marketLoading, setMarketLoading] = useState(true)
   const [err, setErr] = useState('')
   const [questions, setQuestions] = useState([])
   const [posts, setPosts] = useState([])
+  const [marketItems, setMarketItems] = useState([])
 
   useEffect(() => {
     let alive = true
     ;(async () => {
       setErr('')
       try {
-        const [qs, lfs] = await Promise.all([listQuestions({ page: 0, size: 4 }), listLostFound({ page: 0, size: 4 })])
+        const [qs, lfs, marketplace] = await Promise.all([
+          listQuestions({ page: 0, size: 4 }),
+          listLostFound({ page: 0, size: 4 }),
+          getMarketplaceItems({ page: 0, size: 4 }),
+        ])
         if (alive) {
           setQuestions(qs || [])
           setPosts(lfs || [])
+          setMarketItems(marketplace || [])
         }
       } catch (e) {
         if (alive) setErr(getApiErrorMessage(e))
@@ -54,6 +63,7 @@ export function HomePage() {
         if (alive) {
           setQLoading(false)
           setLfLoading(false)
+          setMarketLoading(false)
         }
       }
     })()
@@ -65,10 +75,10 @@ export function HomePage() {
   return (
     <PageContainer
       title={`Hi ${user?.fullName?.split(' ')?.[0] || 'there'}`}
-      subtitle="Your campus dashboard. Jump into Q&A or report a lost/found item."
+      subtitle="Your campus dashboard. Jump into Q&A, report a lost item, or reserve something useful from the marketplace."
       actions={
-        <Button variant="secondary" onClick={() => navigate('/questions')} className="gap-2">
-          <Search className="h-4 w-4" /> Browse Q&A
+        <Button variant="secondary" onClick={() => navigate('/marketplace')} className="gap-2">
+          <ShoppingBag className="h-4 w-4" /> Browse Marketplace
         </Button>
       }
     >
@@ -81,13 +91,13 @@ export function HomePage() {
               <div className="lg:col-span-2">
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 text-xs font-extrabold text-slate-700">
                   <ShieldCheck className="h-4 w-4 text-indigo-700" />
-                  JWT auth · Role-based access · Clean architecture
+                  JWT auth · Role-based access · Marketplace reservations · Clean architecture
                 </div>
                 <div className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                  Build reputation. <span className="text-indigo-700">Help classmates.</span> Find lost items faster.
+                  Ask better. <span className="text-indigo-700">Recover faster.</span> Buy smarter on campus.
                 </div>
                 <div className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
-                  CampusConnect combines a StackOverflow-style forum with a campus lost & found feed. Keep it helpful, keep it clean.
+                  CampusConnect now brings together Q&A, Lost & Found, and a token-based campus marketplace with backend-verified Razorpay test payments.
                 </div>
               </div>
               <div className="grid gap-3">
@@ -112,6 +122,9 @@ export function HomePage() {
                     <Button size="sm" variant="secondary" onClick={() => navigate('/lost-found/new')} className="gap-1.5">
                       <PlusCircle className="h-4 w-4" /> Report
                     </Button>
+                    <Button size="sm" variant="secondary" onClick={() => navigate('/marketplace/create')} className="gap-1.5">
+                      <PlusCircle className="h-4 w-4" /> Sell
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -121,9 +134,10 @@ export function HomePage() {
 
         {err ? <Alert tone="error" title="Could not load dashboard">{err}</Alert> : null}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <ActionCard to="/ask" icon={FileQuestion} title="Ask a Question" desc="Get help fast with clean, tagged questions." />
           <ActionCard to="/lost-found/new" icon={PlusCircle} title="Report Lost/Found" desc="Post location and incident date with optional image URL." />
+          <ActionCard to="/marketplace/create" icon={ShoppingBag} title="Create Listing" desc="Sell a campus item and accept token reservations online." />
           {isAdmin ? (
             <ActionCard to="/admin" icon={ShieldCheck} title="Admin Portal" desc="Review platform activity and moderate content." />
           ) : null}
@@ -171,6 +185,27 @@ export function HomePage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <div className="text-lg font-extrabold text-slate-900">Latest Marketplace Listings</div>
+              <div className="text-sm text-slate-600">Reserve items with a small token payment.</div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/marketplace')} className="gap-1.5">
+              View all <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+          {marketLoading ? (
+            <Loader label="Loading marketplace" />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {marketItems.map((item) => (
+                <MarketplaceCard key={item.id} item={item} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </PageContainer>

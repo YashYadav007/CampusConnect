@@ -1,7 +1,7 @@
 # 🎓 CampusConnect
 
 <p align="center">
-  <b>A full-stack student portal for campus collaboration, Q&A, lost-and-found reporting, claim handling, and admin moderation.</b>
+  <b>A full-stack student portal for campus collaboration, Q&A, lost-and-found reporting, claim handling, campus marketplace reservations, and admin moderation.</b>
 </p>
 
 <p align="center">
@@ -22,12 +22,14 @@ CampusConnect is a campus-focused web application built as a complete student pr
 
 - ❓ **Q&A Forum**: ask questions, answer questions, vote, accept answers, build reputation
 - 🎒 **Lost & Found System**: report lost/found items, submit claims, review claims, resolve items
+- 🛒 **Campus Marketplace**: create listings, collect token reservations, and verify Razorpay test-mode payments
 - 🛡️ **Admin Portal**: manage users, questions, answers, lost/found posts, and claims
 
 This repository contains both:
 
 - a **Spring Boot backend**
 - a **React frontend**
+- a **Razorpay test-mode billing flow** for marketplace token payments
 
 ---
 
@@ -226,6 +228,7 @@ com.campusconnect
 ├── config
 ├── enums
 ├── lostfound
+├── marketplace
 ├── qa
 └── user
 ```
@@ -256,6 +259,8 @@ If you want the shortest possible path to a running app, use this exact order.
 cd path\to\CampusConnect
 docker compose up -d
 $env:DB_PASSWORD="password"
+$env:RAZORPAY_KEY_ID="rzp_test_your_key_id"
+$env:RAZORPAY_KEY_SECRET="your_test_key_secret"
 ./mvnw spring-boot:run
 ```
 
@@ -336,6 +341,7 @@ The backend uses:
 - Spring Data JPA
 - MySQL
 - Swagger/OpenAPI
+- Razorpay Standard Checkout integration in test mode
 
 ## 7.2 Important password note
 
@@ -349,6 +355,8 @@ So for Docker-based local development, start backend like this.
 
 ```powershell
 $env:DB_PASSWORD="password"
+$env:RAZORPAY_KEY_ID="rzp_test_your_key_id"
+$env:RAZORPAY_KEY_SECRET="your_test_key_secret"
 ./mvnw spring-boot:run
 ```
 
@@ -356,10 +364,32 @@ $env:DB_PASSWORD="password"
 
 ```cmd
 set DB_PASSWORD=password
+set RAZORPAY_KEY_ID=rzp_test_your_key_id
+set RAZORPAY_KEY_SECRET=your_test_key_secret
 mvnw spring-boot:run
 ```
 
-## 7.3 Windows Maven wrapper note
+## 7.3 Razorpay test mode setup
+
+Marketplace payments require Razorpay test credentials.
+
+1. Log in to Razorpay
+2. Switch to **Test Mode**
+3. Open **Account & Settings -> API Keys**
+4. Generate a test key pair
+5. Copy the **Key Id** and **Key Secret**
+
+Important:
+
+- use test mode only
+- keep the secret only in backend env variables
+- backend startup fails fast if the keys are missing
+
+Detailed guide:
+
+- [docs/MARKETPLACE_PAYMENT_SETUP.md](./docs/MARKETPLACE_PAYMENT_SETUP.md)
+
+## 7.4 Windows Maven wrapper note
 
 If `./mvnw` does not work in your shell, use:
 
@@ -373,7 +403,7 @@ or:
 .\mvnw.cmd spring-boot:run
 ```
 
-## 7.4 Backend URLs
+## 7.5 Backend URLs
 
 Once backend is running:
 
@@ -381,7 +411,7 @@ Once backend is running:
 - Swagger UI: `http://localhost:8080/swagger-ui`
 - OpenAPI docs: `http://localhost:8080/v3/api-docs`
 
-## 7.5 What success looks like
+## 7.6 What success looks like
 
 You should eventually see lines like:
 
@@ -487,6 +517,8 @@ If demo accounts do not work, the cleanest reset is:
 docker compose down -v
 docker compose up -d
 $env:DB_PASSWORD="password"
+$env:RAZORPAY_KEY_ID="rzp_test_your_key_id"
+$env:RAZORPAY_KEY_SECRET="your_test_key_secret"
 ./mvnw spring-boot:run
 ```
 
@@ -530,6 +562,16 @@ $env:DB_PASSWORD="password"
 - approve or reject claim
 - approval resolves item
 - other pending claims are auto-rejected
+
+## 🛒 Marketplace + Billing
+
+- create marketplace listings
+- include full price and token amount
+- browse items with filters
+- reserve an available item through Razorpay Standard Checkout in test mode
+- backend verifies the payment signature before reserving the item
+- item becomes `RESERVED` on verified payment success
+- seller can mark the item `SOLD`
 
 ## 🛡️ Admin Portal
 
@@ -580,6 +622,22 @@ $env:DB_PASSWORD="password"
 3. views users/questions/posts/claims
 4. deletes or manages records when needed
 5. cleanup is handled safely and transactionally
+
+## 12.5 Marketplace billing flow
+
+1. seller creates a marketplace listing
+2. buyer opens an available listing
+3. frontend requests a Razorpay order from backend
+4. backend creates the order and stores a `CREATED` payment transaction
+5. Razorpay checkout opens in test mode
+6. frontend receives the success callback from Razorpay
+7. frontend sends order id, payment id, and signature to backend
+8. backend verifies the signature using the Razorpay secret
+9. only after verification succeeds:
+10. transaction becomes `SUCCESS`
+11. item becomes `RESERVED`
+12. `reservedBy` is stored on the listing
+13. seller can later mark the item `SOLD`
 
 ---
 
@@ -642,6 +700,7 @@ Contains all API wrappers:
 - questions
 - lost/found
 - claims
+- marketplace
 - admin
 
 ### `frontend/src/context/`
@@ -671,6 +730,7 @@ Contains page-level screens:
 - auth pages
 - Q&A pages
 - lost/found pages
+- marketplace pages
 - admin pages
 
 ## 14.2 API strategy
@@ -712,6 +772,7 @@ Key files:
 - register/login
 - question listing and detail
 - lost/found listing and detail
+- marketplace listing and detail
 - Swagger docs
 
 ### Auth-only
@@ -723,6 +784,11 @@ Key files:
 - create lost/found post
 - submit claim
 - owner claim management
+- create marketplace listing
+- create marketplace payment order
+- verify marketplace payment
+- view own marketplace listings
+- mark own marketplace item sold
 
 ### Admin-only
 
@@ -820,6 +886,41 @@ Rule:
 
 - one pending claim per user per post
 
+## MarketplaceItem
+
+Includes:
+
+- seller
+- title
+- description
+- category
+- conditionLabel
+- price
+- tokenAmount
+- imageUrl
+- status
+- reservedBy
+
+Rule:
+
+- `tokenAmount` must be greater than `0` and less than or equal to `price`
+
+## PaymentTransaction
+
+Includes:
+
+- marketplaceItem
+- buyer
+- amount
+- razorpayOrderId
+- razorpayPaymentId
+- razorpaySignature
+- status
+
+Rule:
+
+- backend verifies the payment signature before marking success
+
 ---
 
 # 📡 17. API Overview
@@ -858,6 +959,16 @@ Use Swagger for full request/response details. This section is the quick map.
 - `GET /api/lost-found/{id}/claims`
 - `POST /api/claims/{id}/approve`
 - `POST /api/claims/{id}/reject`
+
+## Marketplace
+
+- `POST /api/marketplace`
+- `GET /api/marketplace`
+- `GET /api/marketplace/{id}`
+- `GET /api/marketplace/my-listings`
+- `PATCH /api/marketplace/{id}/mark-sold`
+- `POST /api/marketplace/{id}/create-order`
+- `POST /api/marketplace/payments/verify`
 
 ## Admin
 
@@ -924,6 +1035,16 @@ Use Swagger for full request/response details. This section is the quick map.
 - one pending claim per user per post
 - approval resolves post and rejects other pending claims
 
+## Marketplace rules
+
+- seller cannot reserve own item
+- only `AVAILABLE` items can create a new payment order
+- item becomes `RESERVED` only after backend payment signature verification succeeds
+- repeated verify for an already successful payment is idempotent
+- if item is already `RESERVED` or `SOLD`, create-order fails cleanly
+- seller can mark own item as sold
+- `reservedBy` stores the buyer after verified success
+
 ## Admin rules
 
 - admin routes require admin role
@@ -970,6 +1091,8 @@ Environment variables involved:
 
 - `VITE_API_BASE_URL`
 - `APP_CORS_ALLOWED_ORIGINS`
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
 
 Frontend env example:
 
@@ -995,6 +1118,7 @@ Coverage includes:
 - accepted answers
 - lost/found
 - claims
+- marketplace billing flow
 - admin moderation
 
 ## Frontend checks
@@ -1045,6 +1169,22 @@ If using Docker from this repo, run backend with:
 
 ```powershell
 $env:DB_PASSWORD="password"
+$env:RAZORPAY_KEY_ID="rzp_test_your_key_id"
+$env:RAZORPAY_KEY_SECRET="your_test_key_secret"
+./mvnw spring-boot:run
+```
+
+## Razorpay configuration missing
+
+Reason:
+
+- backend requires `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`
+
+Fix:
+
+```powershell
+$env:RAZORPAY_KEY_ID="rzp_test_your_key_id"
+$env:RAZORPAY_KEY_SECRET="your_test_key_secret"
 ./mvnw spring-boot:run
 ```
 
@@ -1078,6 +1218,8 @@ Best clean reset:
 docker compose down -v
 docker compose up -d
 $env:DB_PASSWORD="password"
+$env:RAZORPAY_KEY_ID="rzp_test_your_key_id"
+$env:RAZORPAY_KEY_SECRET="your_test_key_secret"
 ./mvnw spring-boot:run
 ```
 
@@ -1090,6 +1232,15 @@ $env:DB_PASSWORD="password"
 Run app:
 
 ```powershell
+./mvnw spring-boot:run
+```
+
+Run app with Docker MySQL + Razorpay test keys:
+
+```powershell
+$env:DB_PASSWORD="password"
+$env:RAZORPAY_KEY_ID="rzp_test_your_key_id"
+$env:RAZORPAY_KEY_SECRET="your_test_key_secret"
 ./mvnw spring-boot:run
 ```
 
@@ -1167,7 +1318,11 @@ docker compose up -d
 - [VoteService.java](./src/main/java/com/campusconnect/qa/service/VoteService.java)
 - [LostFoundService.java](./src/main/java/com/campusconnect/lostfound/service/LostFoundService.java)
 - [ClaimService.java](./src/main/java/com/campusconnect/lostfound/service/ClaimService.java)
+- [MarketplaceService.java](./src/main/java/com/campusconnect/marketplace/service/MarketplaceService.java)
+- [MarketplacePaymentService.java](./src/main/java/com/campusconnect/marketplace/service/MarketplacePaymentService.java)
+- [RazorpayGatewayClient.java](./src/main/java/com/campusconnect/marketplace/service/RazorpayGatewayClient.java)
 - [AdminService.java](./src/main/java/com/campusconnect/admin/service/AdminService.java)
+- [docs/MARKETPLACE_PAYMENT_SETUP.md](./docs/MARKETPLACE_PAYMENT_SETUP.md)
 
 ## Frontend
 
@@ -1178,6 +1333,8 @@ docker compose up -d
 - [frontend/src/pages/HomePage.jsx](./frontend/src/pages/HomePage.jsx)
 - [frontend/src/pages/QuestionDetailPage.jsx](./frontend/src/pages/QuestionDetailPage.jsx)
 - [frontend/src/pages/LostFoundDetailPage.jsx](./frontend/src/pages/LostFoundDetailPage.jsx)
+- [frontend/src/pages/MarketplaceDetailPage.jsx](./frontend/src/pages/MarketplaceDetailPage.jsx)
+- [frontend/src/api/marketplaceApi.js](./frontend/src/api/marketplaceApi.js)
 - [frontend/src/pages/AdminDashboardPage.jsx](./frontend/src/pages/AdminDashboardPage.jsx)
 
 ---

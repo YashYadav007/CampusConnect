@@ -12,6 +12,10 @@ import { AskQuestionPage } from './pages/AskQuestionPage'
 import { LostFoundPage } from './pages/LostFoundPage'
 import { CreateLostFoundPage } from './pages/CreateLostFoundPage'
 import { LostFoundDetailPage } from './pages/LostFoundDetailPage'
+import { MarketplacePage } from './pages/MarketplacePage'
+import { MarketplaceDetailPage } from './pages/MarketplaceDetailPage'
+import { CreateMarketplaceItemPage } from './pages/CreateMarketplaceItemPage'
+import { MyMarketplaceListingsPage } from './pages/MyMarketplaceListingsPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { AdminUsersPage } from './pages/AdminUsersPage'
 import { AdminQuestionsPage } from './pages/AdminQuestionsPage'
@@ -66,6 +70,25 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CreateLostFoundPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route path="/marketplace" element={<MarketplacePage />} />
+            <Route path="/marketplace/:id" element={<MarketplaceDetailPage />} />
+            <Route
+              path="/marketplace/create"
+              element={
+                <ProtectedRoute>
+                  <CreateMarketplaceItemPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/marketplace/my-listings"
+              element={
+                <ProtectedRoute>
+                  <MyMarketplaceListingsPage />
                 </ProtectedRoute>
               }
             />

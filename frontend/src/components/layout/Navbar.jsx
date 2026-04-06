@@ -1,6 +1,6 @@
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LogOut, Menu, MessageCircleQuestion, Search, Shapes, ShieldCheck, X } from 'lucide-react'
+import { LogOut, Menu, MessageCircleQuestion, Search, Shapes, ShieldCheck, ShoppingBag, X } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../common/Button'
@@ -91,6 +91,7 @@ export function Navbar() {
           {isAuthed ? <NavItem to="/" icon={Search} label="Home" /> : null}
           <NavItem to="/questions" icon={MessageCircleQuestion} label="Q&A" />
           <NavItem to="/lost-found" icon={Shapes} label="Lost & Found" />
+          <NavItem to="/marketplace" icon={ShoppingBag} label="Marketplace" />
           {isAdmin ? <NavItem to="/admin" icon={ShieldCheck} label="Admin" /> : null}
         </div>
 
@@ -209,6 +210,16 @@ export function Navbar() {
               )}
             >
               Lost & Found
+            </NavLink>
+            <NavLink
+              to="/marketplace"
+              onClick={() => setOpen(false)}
+              className={clsx(
+                'rounded-xl px-3 py-2 text-sm font-extrabold hover:bg-slate-100',
+                location.pathname.startsWith('/marketplace') ? 'text-indigo-700' : 'text-slate-900'
+              )}
+            >
+              Marketplace
             </NavLink>
             {isAdmin ? (
               <NavLink
